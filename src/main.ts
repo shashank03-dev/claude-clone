@@ -20,15 +20,26 @@ if (!values.prompt) {
   process.exit(1);
 }
 
+const apiKey = process.env.GROK_API_KEY;
+
 const client = new OpenAI({
-  apiKey: process.env.GROK_API_KEY,
+  apiKey,
   baseURL: "https://api.groq.com/openai/v1",
 });
 
-const message = await client.chat.completions.create({
-  max_tokens: 1024,
-  messages: [{ role: "user", content: values.prompt }],
+const stream = await client.chat.completions.create({
   model: values.model,
+  messages: [{ role: "user", content: values.prompt }],
+  max_tokens: 1024,
+  stream: true,
 });
 
-console.log(message.choices);
+for await (const chunk of stream) {
+  const text = chunk.choices[0]?.delta?.content;
+
+  if (typeof text === "string") {
+    process.stdout.write(text);
+  }
+}
+
+console.log();
