@@ -16,7 +16,7 @@ const providers: Record<string, () => Provider> = {
     createOpenAIComp(
       "groq",
       "https://api.groq.com/openai/v1",
-      process.env.ANTHROPIC_API_KEY!,
+      process.env.GROK_API_KEY!,
       "openai/gpt-oss-120b",
     ),
 };
