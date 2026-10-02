@@ -8,15 +8,15 @@ const providers: Record<string, () => Provider> = {
   "anthropic-openai": () =>
     createOpenAIComp(
       "anthropic-openai",
-      "https://api.anthropic.com/v1/ ",
-      process.env.ANTHROPIC_API_KEY!,
+      process.env.GROK_API_KEY!,
+      "http://api.openai.com/v1",
       "claude-sonnet-5",
     ),
   groq: () =>
     createOpenAIComp(
       "groq",
-      "https://api.groq.com/openai/v1",
       process.env.GROK_API_KEY!,
+      "https://api.groq.com/openai/v1",
       "openai/gpt-oss-120b",
     ),
 };
