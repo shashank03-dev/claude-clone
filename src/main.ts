@@ -3,8 +3,11 @@ import { fileURLToPath } from "node:url";
 import OpenAI from "openai";
 import { parseArgs } from "node:util";
 import { getProvider } from "./PROVIDER/index.ts";
+import { readTool } from "./tools/read.ts";
+import type { AssistantMessage, Message } from "./types.ts";
 
-import type { Message } from "./types.ts";
+const tools = [readTool];
+
 config({
   path: fileURLToPath(new URL("../.env", import.meta.url)),
   quiet: true,
@@ -29,15 +32,47 @@ const model = values.model ?? provider.defaultModel;
 
 const messages: Message[] = [{ role: "user", content: values.prompt }];
 
-for await (const event of provider.stream({ messages, model })) {
-  if (event.type === "text_delta") process.stdout.write(event.delta);
-  else {
-    const { usage, stopReason } = event.message;
-    console.log(
-      `\n\n ${provider.name} ... ${model} ...  ${usage.input}...  ${usage.output}...  ${stopReason}`,
-    );
+async function callModel(): Promise<AssistantMessage> {
+  for await (const event of provider.stream({ messages, model, tools })) {
+    if (event.type == "text_delta") process.stdout.write(event.delta);
+    else {
+      const { usage, stopReason } = event.message;
+      console.log(
+        `\n\n  ${provider.name} ....  ${model} ... ${usage.input} ... ${usage.output} ... ${stopReason}`,
+      );
+      return event.message;
+    }
   }
+  throw new Error("stream ended");
 }
+
+const first = await callModel();
+messages.push(first);
+if (first.stopReason === "toolUse") {
+  for (const block of first.content) {
+    if (block.type !== "toolCall") continue;
+    console.log(`-> ${block.name}(${JSON.stringify(block.arguments)})`);
+    const result = await readTool.execute(block.arguments);
+    messages.push({
+      role: "toolResult",
+      toolCallId: block.id,
+      toolName: block.name,
+      content: result,
+      isError: false,
+    });
+  }
+  messages.push(await callModel());
+}
+
+// for await (const event of provider.stream({ messages, model })) {
+//   if (event.type === "text_delta") process.stdout.write(event.delta);
+//   else {
+//     const { usage, stopReason } = event.message;
+//     console.log(
+//       `\n\n ${provider.name} ... ${model} ...  ${usage.input}...  ${usage.output}...  ${stopReason}`,
+//     );
+//   }
+// }
 
 // const apiKey = process.env.GROK_API_KEY;
 
