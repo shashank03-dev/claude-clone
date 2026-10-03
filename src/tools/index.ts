@@ -1,3 +1,4 @@
 import { readTool } from "./read.ts";
 import { Tool } from "../types.ts";
-export const tools: Tool[] = [readTool];
+import { bashTool } from "./bash.ts";
+export const tools: Tool[] = [bashTool, readTool];
